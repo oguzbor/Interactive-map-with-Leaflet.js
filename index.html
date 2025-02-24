@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interactive Map with Routing and Directions</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <!-- Leaflet MarkerCluster JavaScript -->
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <!-- Leaflet Control Geocoder JavaScript -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <!-- Leaflet Routing Machine JavaScript -->
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <!-- Esri Leaflet Directions JavaScript -->
+    <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-routing/dist/esri-leaflet-routing.js"></script>
+
+    <style>
+        #map { height: 600px; }
+        #form {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Map with Routing and Directions</h1>
+    <div id="form">
+        <label for="start">Başlangıç:</label>
+        <input type="text" id="start" placeholder="Başlangıç konumunu girin" />
+        <label for="end">Bitiş:</label>
+        <input type="text" id="end" placeholder="Bitiş konumunu girin" />
+        <button id="routeButton">Yol Tarifi Bul</button>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([39.9334, 32.8597], 6); // Centered on Turkey
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var locations = [
+            { name: 'Ankara', lat: 39.9334, lon: 32.8597, info: 'Capital of Turkey' },
+            { name: 'Istanbul', lat: 41.0082, lon: 28.9784, info: 'Largest city in Turkey' },
+            { name: 'Izmir', lat: 38.4237, lon: 27.1428, info: 'Known for its ancient ruins' },
+            { name: 'Antalya', lat: 36.8969, lon: 30.7133, info: 'Popular tourist destination' },
+            { name: 'Bursa', lat: 40.1828, lon: 29.0669, info: 'Famous for its mosques' }
+        ];
+
+        var markers = L.markerClusterGroup();
+
+        locations.forEach(function(location) {
+            var customIcon = L.icon({
+                iconUrl: 'https://leafletjs.com/examples/custom-icons/leaf-red.png',
+                shadowUrl: 'https://leafletjs.com/examples/custom-icons/leaf-shadow.png',
+                iconSize: [38, 95],
+                shadowSize: [50, 64],
+                iconAnchor: [22, 94],
+                shadowAnchor: [4, 62],
+                popupAnchor: [-3, -76]
+            });
+
+            var marker = L.marker([location.lat, location.lon], { icon: customIcon });
+
+            marker.bindPopup('<b>' + location.name + '</b><br>' + location.info);
+
+            markers.addLayer(marker);
+        });
+
+        map.addLayer(markers);
+
+        L.Control.geocoder().addTo(map);
+
+        var routingControl;
+
+        document.getElementById('routeButton').addEventListener('click', function() {
+            var startLocation = document.getElementById('start').value;
+            var endLocation = document.getElementById('end').value;
+
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+
+            routingControl = L.Routing.control({
+                waypoints: [],
+                routeWhileDragging: true,
+                showAlternatives: true,
+                geocoder: L.Control.Geocoder.nominatim()
+            }).addTo(map);
+
+            // Get the current position of the user
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+                L.Control.Geocoder.nominatim().geocode(startLocation, function(results) {
+                    if (results.length > 0) {
+                        var startLatLng = results[0].center;
+                        routingControl.setWaypoints([userLatLng, startLatLng]);
+                    } else {
+                        alert('Başlangıç konumu bulunamadı.');
+                    }
+                });
+
+                L.Control.Geocoder.nominatim().geocode(endLocation, function(results) {
+                    if (results.length > 0) {
+                        var endLatLng = results[0].center;
+                        routingControl.spliceWaypoints(routingControl.getWaypoints().length - 1, 0, endLatLng);
+                    } else {
+                        alert('Bitiş konumu bulunamadı.');
+                    }
+                });
+            }, function() {
+                alert('Mevcut konum alınamadı.');
+            });
+        });
+    </script>
+</body>
+</html>
